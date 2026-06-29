@@ -1,0 +1,11 @@
+<library path="cia406_position_controller">
+  <class name="cia406_position_controller/Cia406PositionController"
+         type="cia406_position_controller::Cia406PositionController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Chainable controller that converts a raw CiA 406 position value
+      (proxy rpdo/data, object 0x6004) into engineering units and exports it
+      as a state interface for downstream controllers.
+    </description>
+  </class>
+</library>

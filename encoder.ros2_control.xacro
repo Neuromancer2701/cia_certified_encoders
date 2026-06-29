@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!-- encoder.ros2_control.xacro
+     ros2_control hardware component for a read-only CiA 406 encoder on the
+     generic proxy CanopenSystem. The proxy exposes GENERIC interfaces (not a
+     named "position"): the conversion controller binds to rpdo/data + rpdo/index.
+
+     NOTE: whether every generic interface must be declared here vs. is
+     auto-created by CanopenSystem has varied across ros2_canopen versions.
+     Cross-check against the canopen_tests example URDFs for your distro. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="cia406_encoder_ros2_control"
+               params="name bus_config master_config can_interface:=can0 node_id:=2">
+
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <plugin>canopen_ros2_control/CanopenSystem</plugin>
+        <param name="bus_config">${bus_config}</param>
+        <param name="master_config">${master_config}</param>
+        <param name="can_interface_name">${can_interface}</param>
+      </hardware>
+
+      <joint name="encoder_joint">
+        <param name="node_id">${node_id}</param>
+
+        <!-- received from device (slave TPDO -> master) : STATE -->
+        <state_interface name="rpdo/index"/>
+        <state_interface name="rpdo/subindex"/>
+        <state_interface name="rpdo/type"/>
+        <state_interface name="rpdo/data"/>
+        <state_interface name="nmt/state"/>
+
+        <!-- sent to device (master -> slave RPDO) : COMMAND.
+             Unused for a read-only encoder but exported by the proxy system. -->
+        <command_interface name="tpdo/index"/>
+        <command_interface name="tpdo/subindex"/>
+        <command_interface name="tpdo/type"/>
+        <command_interface name="tpdo/data"/>
+        <command_interface name="nmt/reset"/>
+      </joint>
+    </ros2_control>
+
+  </xacro:macro>
+</robot>

@@ -1,0 +1,37 @@
+# ros2_controllers.yaml — controller_manager wiring for a CiA 406 encoder.
+#
+# The Cia406PositionController is a CHAINABLE controller: it claims the proxy's
+# raw rpdo/data state interface and EXPORTS a converted `position` STATE
+# interface (engineering units) that downstream controllers can claim. Exporting
+# state interfaces does NOT put this controller into chained mode, so activation
+# ordering is loose — it just needs to run before any consumer.
+
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    encoder_position_controller:
+      type: cia406_position_controller/Cia406PositionController
+
+encoder_position_controller:
+  ros__parameters:
+    joint: encoder_joint
+    # Generic proxy state interfaces to claim (raw, multiplexed mailbox).
+    raw_state_interface: "encoder_joint/rpdo/data"
+    index_state_interface: "encoder_joint/rpdo/index"
+    # Only convert when the arrived object matches this index (defensive demux).
+    position_object_index: 0x6004
+    # Counts per output unit. For radians: steps_per_rev / (2*pi).
+    # For a wheel in meters: counts_per_meter. >>> per-device <<<
+    counts_per_unit: 1303.797       # e.g. 8192 steps/rev / (2*pi)  -> radians
+    offset: 0.0
+    # Name of the exported state interface: <controller_name>/<exported_interface>
+    exported_interface: "position"
+
+# To publish the converted value on /joint_states you can either:
+#  (a) name this controller "encoder_joint" so joint_state_broadcaster picks up
+#      <encoder_joint>/position, or
+#  (b) add a small broadcaster that claims encoder_position_controller/position.

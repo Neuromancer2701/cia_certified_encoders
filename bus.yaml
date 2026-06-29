@@ -1,0 +1,50 @@
+# bus.yaml — CiA 406 absolute encoder via ProxyDriver (read-only)
+#
+# One encoder node on the bus. Adapt the marked >>> per-device <<< values from
+# the vendor datasheet / EDS. The encoder is read-only, so we map only its
+# position object (0x6004) to a transmit PDO and configure no receive PDOs.
+
+master:
+  node_id: 1
+  driver: "ros2_canopen::MasterDriver"
+  package: "canopen_master_driver"
+  sync_period: 10000          # us; SYNC drives cyclic TPDO if transmission=0x01
+
+options:
+  dcf_path: "@BUS_CONFIG_PATH@"
+
+encoder_joint:
+  node_id: 0x02               # >>> per-device <<< (set via LSS / rotary switches)
+  dcf: "encoder.eds"          # >>> per-device <<< vendor EDS (see README re: licensing)
+  driver: "ros2_canopen::ProxyDriver"
+  package: "canopen_proxy_driver"
+  reset_communication: false
+  # baudrate: 500             # kbit/s — uncomment/set per-device if not bus default
+
+  # --- CiA 406 startup configuration (SDOs written after boot) ----------------
+  sdo:
+    # Operating parameters: bit0 = code sequence (0 = CW increasing). >>> per-device <<<
+    - {index: 0x6000, sub_index: 0, value: 0x0000}
+    # Measuring units per revolution (resolution / steps per rev). >>> per-device <<<
+    - {index: 0x6001, sub_index: 0, value: 8192}
+    # Total measuring range in measuring units (singleturn*multiturn). >>> per-device <<<
+    - {index: 0x6002, sub_index: 0, value: 0x02000000}
+    # Preset value (optional): aligns the zero to a known axis position.
+    # - {index: 0x6003, sub_index: 0, value: 0}
+
+  # --- Process data -----------------------------------------------------------
+  # The encoder TRANSMITS its position (slave -> master), so it is configured
+  # here under `tpdo`. It ARRIVES on the master's ros2_control `rpdo/data` STATE
+  # interface. Map ONLY the position object so `rpdo/data` is unambiguous.
+  tpdo:
+    1:
+      enabled: true
+      cob_id: "auto"
+      transmission: 0x01        # cyclic on SYNC. Use 0xFE for async/event-driven.
+      mapping:
+        - {index: 0x6004, sub_index: 0}   # Position value (CiA 406)
+        # For high-resolution position use 0x6008 instead and update counts_per_unit.
+        # Do NOT add 0x6030 (speed) here unless your controller demuxes rpdo/index.
+
+  # Read-only device: no master -> encoder process data.
+  rpdo: []
